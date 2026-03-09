@@ -1,6 +1,4 @@
-### MTTP Github for Team 01 ###
-
-### Packages and opening csv ###
+### MTTP Where to Remodel ###
 
 import pandas as pd
 import numpy as np
@@ -9,9 +7,59 @@ import matplotlib.pyplot as plt
 
 import pandas as pd
 
+# Load the data
+file_path = r"C:\Users\trent\Downloads\Programming for DASC\R\Data\Scenario3_Data.csv"
 
-file_path = r"C:\Users\trent\Downloads\Programming for DASC\R\Data\Scenario3_Data.csv" ###Insert your own file path
+transaction_data = pd.read_csv(file_path)
 
-store_data = pd.read_csv(file_path)
+print(transaction_data.head())
 
-print(store_data.head())
+# Delete customer_id column
+transaction_data = transaction_data.drop(columns=['customer_id'])
+
+# Calculate revenue for each transaction
+transaction_data['revenue'] = transaction_data['units_sold'] * transaction_data['selling_price']
+
+# Changing datatypes
+transaction_data.info()
+
+transaction_data['date'] = pd.to_datetime(transaction_data['date'])
+
+### We only have data from 12/29/24 - 1/31/2026 ###
+
+### KPI's: total store revenue, total transactions, average revenue per transaction, units sold per store
+
+    #  Total Store Revenue
+total_store_revenue = transaction_data.groupby('store_id')['revenue'].sum().reset_index()
+total_store_revenue = total_store_revenue.sort_values(by='revenue', ascending=False)
+print(total_store_revenue)
+
+    # Total Transactions
+total_transactions = transaction_data.groupby('store_id')['transaction_id'].nunique().reset_index()
+total_transactions = total_transactions.rename(columns={'transaction_id': 'total_transactions'})
+print(total_transactions)
+
+    # Average Revenue per Transaction
+transaction_totals = transaction_data.groupby(['transaction_id','store_id'])['revenue'].sum().reset_index()
+average_revenue_per_transaction = transaction_totals.groupby('store_id')['revenue'].mean().reset_index()
+average_revenue_per_transaction = average_revenue_per_transaction.rename(columns={'revenue':'avg_revenue_per_transaction'})
+
+    # Units Sold per Store
+units_sold_per_store = transaction_data.groupby('store_id')['units_sold'].sum().reset_index()
+print(units_sold_per_store)
+
+# Merge all KPI dataframes into one summary dataframe
+KPI_summary = transaction_data.groupby('store_id').agg(
+    total_revenue=('revenue','sum'),
+    total_units_sold=('units_sold','sum')
+).reset_index()
+transaction_totals = transaction_data.groupby(
+    ['transaction_id','store_id']
+)['revenue'].sum().reset_index()
+
+transaction_metrics = transaction_totals.groupby('store_id').agg(
+    total_transactions=('transaction_id','count'),
+    avg_revenue_per_transaction=('revenue','mean')
+).reset_index()
+KPI_summary = KPI_summary.merge(transaction_metrics, on='store_id')
+print(KPI_summary)
